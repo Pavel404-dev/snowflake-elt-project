@@ -7,3 +7,10 @@ select (b.building_unit_count - count(p.home_status)) from buildings b
 join properties p on p.building_key = b.building_key
 where p.home_status ='SOLD'
 group by 
+
+
+вкажи продажі двох кварталів за останніх 3 роки. Використати таблицю dim_date.
+
+
+вирахувати скільки $ за м2
+
