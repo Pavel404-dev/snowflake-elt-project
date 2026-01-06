@@ -75,3 +75,17 @@ group by
 
 вирахувати скільки $ за м2
 
+SELECT 
+    PROPERTY_STREET_ADDRESS,
+    PROPERTY_STATE,
+    CLIMATE_CLIMATE_FLOOD_RISK_VALUE,
+    CLIMATE_CLIMATE_FIRE_RISK_VALUE,
+    PRICE
+FROM properties
+join buildings on buildings.building_key = properties.building_key
+WHERE 
+    CLIMATE_CLIMATE_FLOOD_RISK_VALUE < 2 -- Низький ризик
+    AND CLIMATE_CLIMATE_FIRE_RISK_VALUE < 2 -- Низький ризик
+    AND HOME_STATUS = 'FOR_SALE'
+ORDER BY PRICE DESC
+
