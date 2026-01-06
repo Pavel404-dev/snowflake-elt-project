@@ -68,7 +68,12 @@ CREATE TABLE DIM_SELLER (
   name varchar(255),
   surname varchar(255),
   phone_number varchar(255),
-  agency_name varchar(255)
+  agency_name varchar(255), 
+  agent_license_number varchar(255),
+  agent_email varchar(255) ,
+  brokerage_name varchar(255) ,
+  broker_phone_number varchar(255) ,
+  is_premier_agent boolean
 );
 
 ALTER TABLE FACT_ESTATE_METRICS ADD FOREIGN KEY (property_key) REFERENCES DIM_PROPERTY_DETAILS (property_key);
