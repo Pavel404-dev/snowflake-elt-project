@@ -60,7 +60,13 @@ CREATE TABLE DIM_DATE (
   year int,
   quarter int,
   month int,
-  month_name varchar(255)
+  month_name varchar(255), 
+  day_of_week int ,
+  day_name varchar(255) ,
+  week_of_year int ,
+  is_weekend boolean ,
+  is_holiday boolean ,
+  fiscal_quarter int 
 );
 
 CREATE TABLE DIM_SELLER (
