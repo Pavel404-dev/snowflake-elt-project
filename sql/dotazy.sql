@@ -332,7 +332,6 @@ FROM LION_MY_LAST_PROJECT.STAGING.STAGING_REAL_ESTATE_FULL;
 
 
 --dim_property_details
-
 INSERT INTO DIM_PROPERTY_DETAILS (zillow_zpid, home_type, home_status, year_built, total_stories, room_count, structure_type, roof_type, heating_source, is_new, description, area, bedrooms, bathrooms, mls_id, parcel_id, lot_size_dimensions, architectural_style, has_attached_garage)
 SELECT 
     property_zpid,
