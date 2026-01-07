@@ -361,14 +361,21 @@ Táto tabuľka využíva okenné funkcie na výpočet rozdielu medzi cenou konkr
 
 ```sql
 SELECT 
-    p.property_key, 
-    l.county, 
-    f.estimate_price,
-    AVG(f.estimate_price) OVER (PARTITION BY l.county) AS avg_county_price,
-    f.estimate_price - AVG(f.estimate_price) OVER (PARTITION BY l.county) AS price_diff_from_avg
+p.zillow_zpid,
+    CONCAT(COALESCE(l.home_number, ''), ' ', COALESCE(l.street_name, '')) AS full_address,
+        l.county, 
+        f.estimate_price,
+        AVG(f.estimate_price) OVER (PARTITION BY l.county) AS avg_county_price,
+        f.estimate_price - AVG(f.estimate_price) OVER (PARTITION BY l.county) AS price_diff_from_avg
 FROM FACT_ESTATE_METRICS f
 JOIN DIM_LOCATION l ON f.location_key = l.location_key
-JOIN DIM_PROPERTY_DETAILS p ON f.property_key = p.property_key;
+JOIN DIM_PROPERTY_DETAILS p ON f.property_key = p.property_key
+WHERE 
+    f.estimate_price IS NOT NULL 
+    AND l.county IS NOT NULL
+    AND f.estimate_price > 0
+ORDER BY price_diff_from_avg desc
+LIMIT 100;
 ```
 
 ### Graf 6: Identifikácia podhodnotených investičných príležitostí
