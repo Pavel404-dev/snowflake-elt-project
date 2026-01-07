@@ -1,60 +1,75 @@
-# 🏠 Analýza realitného trhu v USA (Pensylvánia)
+# ELT proces datasetu US Real Estate (Pennsylvania)
 
-Tento projekt sa zameriava na budovanie dátového skladu a následnú analytiku nehnuteľností v regióne Pensylvánia. Využívame moderný ELT prístup v prostredí **Snowflake** s vizualizáciou architektúry v **MySQL Workbench**.
+Tento repozitár predstavuje implementáciu ELT procesu v Snowflake na analýzu realitného trhu v štáte Pensylvánia (USA). Projekt sa zameriava na transformáciu surových dát z marketplace do hviezdicovej schémy (Star Schema), čo umožňuje efektívnu multidimenzionálnu analýzu kľúčových metrík trhu nehnuteľností.
+
+Výsledný model umožňuje investorom a analytikom preskúmať vzťahy medzi cenou, lokalitou, občianskou vybavenosťou a klimatickými rizikami.
 
 ---
 
 ## 1. Úvod a popis zdrojových dát
 
-Cieľom projektu je analyzovať trh s nehnuteľnosťami v mestách ako **Philadelphia, Pittsburgh a Scranton**. Ako primárny zdroj údajov sme zvolili dataset **US Real Estate Properties** od poskytovateľa **Elementix**, ktorý je dostupný prostredníctvom Snowflake Marketplace.
+Cieľom projektu je analyzovať trh s nehnuteľnosťami v mestách ako **Philadelphia, Pittsburgh a Scranton**. Analýza sa zameriava na hodnotenie investičných príležitostí, vplyv infraštruktúry na cenu a posúdenie klimatických rizík.
 
-### 🎯 Prečo sme si vybrali tento dataset?
-Realitný trh ponúka ideálnu štruktúru pre demonštráciu ELT procesov. Dataset obsahuje bohatú kombináciu:
-* **Finančných ukazovateľov:** Umožňujú ekonomické porovnávanie.
-* **Geografických súradníc:** Umožňujú priestorovú analýzu a mapovanie.
-* **Technických parametrov:** Umožňujú hĺbkovú segmentáciu nehnuteľností.
+Zdrojové dáta pochádzajú z datasetu **US Real Estate Properties** od poskytovateľa **Elementix**, dostupného cez Snowflake Marketplace. Dáta sú v staging vrstve uložené v dvoch rozsiahlych tabuľkách, ktoré obsahujú komplexné technické, finančné a geografické atribúty:
 
-> **Podporovaný biznis proces:** > Analýza primárne podporuje proces **hodnotenia investičných príležitostí (Investment Appraisal)**. Nástroj umožňuje investorom a realitným maklérom identifikovať nehnuteľnosti, ktoré sú podhodnotené vzhľadom na ich lokalitu, občiansku vybavenosť a technický stav.
+### 1.1 Detailný popis staging tabuliek
 
----
+#### A. Tabuľka `buildings` (Metadata budov a infraštruktúra)
+Táto tabuľka slúži ako číselník objektov a komplexov, v ktorých sa nehnuteľnosti nachádzajú. Obsahuje 188 stĺpcov zameraných na širší kontext budovy.
+* **Identifikátory:** `building_key` (PK), `building_zpid` (identifikátor Zillow).
+* **Lokalita a normalizácia adries:** Obsahuje surové aj normalizované adresné údaje (`normalized_city`, `normalized_state_name`, `normalized_zip_code`), čo zabezpečuje vysokú presnosť pri geografickom mapovaní.
+* **Občianska vybavenosť (Amenities):** Detailné informácie o spoločných priestoroch a vybavení (bazén, posilňovňa, výťah, 24-hodinová údržba, park pre domáce zvieratá).
+* **Indexy mobility:** `building_walk_score`, `building_transit_score` a `building_bike_score`, ktoré definujú kvalitu lokality z pohľadu dopravy a dostupnosti.
+* **Pravidlá a poplatky:** Informácie o depozitoch, poplatkoch za prihlášku (`application_fee`) a podrobných pravidlách pre zvieratá (`pet_policy_description`).
 
-### 📊 Typy údajov a zameranie analýzy
-Dáta sú v našom sklade spracované do nasledujúcich kategórií:
+#### B. Tabuľka `properties` (Detaily ponúk a finančné metriky)
+Táto tabuľka predstavuje jadro analýzy, nakoľko obsahuje konkrétne ponuky nehnuteľností, ich fyzický stav a finančnú históriu.
+* **Finančné ukazovatele:** Aktuálna cena (`price`), trhový odhad (`zillow_zestimate`), ročné dane (`reso_facts_tax_annual_amount`), mesačné poplatky HOA a odhadované nájomné.
+* **Fyzické charakteristiky:** Počet spální (`bedrooms`), kúpeľní, rok výstavby (`year_built`), rozloha obytnej plochy (`living_area_value`) a architektonický štýl.
+* **Environmentálne a klimatické riziká:** Indexy povodňového (`flood_risk_value`) a požiarneho rizika vrátane klasifikácie FEMA zón.
+* **Marketingové dáta:** Popularita ponuky vyjadrená cez `zillow_page_view_count` a `zillow_favorite_count`.
+* **Vzdelanie:** Dáta o priradených školských obvodoch (základné, stredné a vysoké školy).
+* **Informácie o predajcoch:** Údaje o agentoch a brokerských spoločnostiach (`brokerage_name`, `attribution_agent_license_number`).
 
-1. **Numerické metriky:** Trhová cena (`PRICE`), odhadovaná hodnota (`ZESTIMATE`), ročné dane a rozloha v štvorcových stopách.
-2. **Geografické údaje:** Presné GPS súradnice (Latitude/Longitude), názvy okresov (**County**) a normalizované adresy pre presnú identifikáciu.
-3. **Kategorické atribúty:** Typy vykurovania, stav nehnuteľnosti (Sold, Pending, Auction), typy striech a infraštruktúra.
+### 1.2 Dátová architektúra
 
-**Hlavný cieľ:** Zistiť, ako lokalita (reprezentovaná indexmi mobility `Walk Score` a `Transit Score`) a technické parametre budovy (vek, počet podlaží) korelujú s trhovou cenou a daňovým zaťažením.
+#### ERD diagram
+Surové dáta sú v staging vrstve prepojené prostredníctvom identifikátora **ZPID** (Zillow Property ID), kde jedna budova (`buildings`) môže obsahovať viacero konkrétnych nehnuteľností/jednotiek (`properties`).
 
----
 
-### 🗂️ Popis zdrojových tabuliek (Staging Layer)
 
-Zdrojový dataset pozostáva z dvoch hlavných tabuliek, ktoré sme využili ako základ pre náš staging layer:
+![ERD Diagram](img/startSchemaFinal.png)
 
-#### 🏢 BUILDINGS
-* **Význam:** Predstavuje fyzické štruktúry, bytové komplexy a ich širšie okolie.
-* **Kľúčové polia:** * `BUILDING_UNIT_COUNT`: Počet bytových jednotiek v objekte.
-    * `BUILDING_WALK_SCORE` / `BUILDING_TRANSIT_SCORE`: Indexy dostupnosti.
-    * `BUILDING_HEATING_SOURCE`: Typ energetického zdroja pre vykurovanie.
-    * **Vybavenosť:** Príznaky pre bazén, výťah či nefajčiarske priestory.
-
-#### 🏠 PROPERTIES
-* **Význam:** Reprezentuje konkrétne ponuky nehnuteľností, ich technický stav a finančnú históriu.
-* **Kľúčové polia:**
-    * `ZILLOW_ZESTIMATE`: Algoritmický odhad trhovej ceny.
-    * `RESO_FACTS_TAX_ANNUAL_AMOUNT`: Ročné daňové zaťaženie.
-    * `YEAR_BUILT` & `RESO_FACTS_STRUCTURE_STORIES_TOTAL`: Vek a výška stavby.
-    * **Prepojenie:** Každý záznam je prepojený na budovu cez `BUILDING_KEY` alebo `ZILLOW_ZPID`.
+*Obrázok 1 Entitno-relačná schéma zdrojových dát (Staging layer)*
 
 ---
 
-## 2. Architektúra a dimenzionálny model
+## 2. Dimenzionálny model
 
-Pre analýzu sme zvolili **hviezdicovú schému (Star Schema)**, ktorá zabezpečuje vysoký výkon pri dopytovaní a prehľadnosť pre BI nástroje.
+V projekte bola navrhnutá **schéma hviezdy (star schema)** podľa Kimballovej metodológie. Táto štruktúra obsahuje jednu tabuľku faktov **`fact_estate_metrics`**, ktorá je prepojená so šiestimi dimenziami:
 
-![Star Schema](img/StarSchemaPNG.png)
+* **`dim_property_details`**: Obsahuje podrobné fyzické informácie o nehnuteľnosti (typ stavby, počet izieb, rozloha, materiál).
+* **`dim_building_info`**: Zahŕňa údaje o budove ako celku (počet jednotiek, vybavenie ako posilňovňa či bazén, bezpečnostné prvky).
+* **`dim_location`**: Obsahuje geografické dáta vrátane informácií o školských obvodoch a indexoch dostupnosti (Walk Score).
+* **`dim_seller`**: Údaje o agentoch, ich licenciách a pridružených brokerských spoločnostiach.
+* **`dim_date`**: Podrobná časová dimenzia pre analýzu trendov (deň, mesiac, štvrťrok, víkendy).
+* **`dim_seller`**: (Voliteľná dimenzia pre informácie o predajcoch).
+
+Štruktúra hviezdicového modelu je znázornená na diagrame nižšie:
+
+![Star Schema](img/FinalStarSchema.png)
+*Obrázok 2 Schéma hviezdy pre US Real Estate Analytics*
+
+---
+
+## 3. ELT proces v Snowflake
+
+ELT proces pozostáva z troch hlavných fáz: extrahovanie (Extract), načítanie (Load) a transformácia (Transform).
+
+### 3.1 Extract (Extrahovanie dát)
+Dáta zo zdrojového datasetu boli najprv sprístupnené v Snowflake prostredníctvom Marketplace. Pre import súborov tretích strán bolo vytvorené interné stage úložisko:
+```sql
+CREATE OR REPLACE STAGE my_stage;
 
 
 
