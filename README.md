@@ -289,6 +289,9 @@ WHERE f.climate_flood_risk_value < 2
 ORDER BY f.estimate_price DESC;
 ```
 
+![Star Schema](img/image1.png)
+
+
 ### Graf 2: Dostupnosť rodinného bývania (Top 10 najlacnejších)
 Graf zobrazuje 10 najdostupnejších nehnuteľností pre rodiny: minimálne 3 spálne a cena pod 300 000 USD. Táto analýza umožňuje sledovať možnosti pre strednú vrstvu obyvateľstva a identifikovať najvýhodnejšie ponuky na trhu.
 
@@ -311,6 +314,9 @@ WHERE
 ORDER BY f.estimate_price ASC
 LIMIT 10;
 ```
+
+![Star Schema](img/image2.png)
+
 
 ### Graf 3: Moderné trendy: Novostavby s vybavením pre zvieratá
 Tento prehľad sa zameriava na moderné budovy postavené po roku 2020, ktoré reflektujú trendy ako "pet-friendly" (parky pre psov). Vizualizácia ukazuje, že nová výstavba sa čoraz viac sústredi na doplnkovú infraštruktúru.
