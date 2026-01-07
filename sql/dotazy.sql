@@ -243,7 +243,7 @@ LEFT JOIN LION_DB_PROJECT_F.PUBLIC.BUILDINGS b
 
 --adding to tables new values
 
-
+--dim_date
     INSERT INTO DIM_DATE (date_key, full_date, year, quarter, month, month_name, day_of_week, day_name, week_of_year, is_weekend, is_holiday, fiscal_quarter)
 SELECT 
     TO_NUMBER(TO_CHAR(TO_DATE(TO_TIMESTAMP(CREATED_TS / 1000000)), 'YYYYMMDD')) as date_key,
@@ -263,3 +263,25 @@ SELECT
     END as fiscal_quarter
 FROM LION_MY_LAST_PROJECT.STAGING.STAGING_REAL_ESTATE_FULL
 WHERE CREATED_TS IS NOT NULL;
+
+--dim_location 
+
+INSERT INTO DIM_LOCATION (city, state_name, zip_code, county, neighborhood, home_number, street_name, latitude, longitude, elementary_school, middle_school, high_school, walk_score, walk_score_description, climate_fema_zone, climate_risk_label)
+SELECT 
+    city,
+    state_name,
+    zip_code,
+    county,
+    neighborhood,
+    home_number,
+    street_name,
+    latitude,
+    longitude,
+    elementary_school,
+    middle_school,
+    high_school,
+    walk_score,
+    walk_score_description,
+    climate_fema_zone,
+    climate_risk_label
+FROM LION_MY_LAST_PROJECT.STAGING.STAGING_REAL_ESTATE_FULL;
