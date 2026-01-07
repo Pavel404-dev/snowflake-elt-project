@@ -162,3 +162,61 @@ WHERE
     HOME_STATUS = 'FOR_SALE' and ZILLOW_PAGE_VIEW_COUNT is not null
 ORDER BY ZILLOW_FAVORITE_COUNT DESC, ZILLOW_PAGE_VIEW_COUNT DESC
 LIMIT 10;
+
+
+
+
+
+Різниця між ціною обєкта та середньою ціною в окрузі (County)
+Чи переплачує клієнт за цей конкретний будинок порівняно з середнім рівнем в окрузі?
+
+SELECT 
+    p.property_key, l.county, f.price,
+    AVG(f.price) OVER (PARTITION BY l.county) as avg_county_price,
+    f.price - AVG(f.price) OVER (PARTITION BY l.county) as price_diff_from_avg
+FROM FACT_ESTATE_METRICS f
+JOIN DIM_LOCATION l ON f.location_key = l.location_key;
+
+
+
+Накопичувальна сума переглядів для Агента
+Скільки всього уваги привертають обєкти конкретного брокера (Running Total).
+
+SQL
+
+SELECT 
+    s.name, s.surname, f.page_view_count,
+    SUM(f.page_view_count) OVER (PARTITION BY s.seller_key ORDER BY f.metric_key) as total_agent_views
+FROM FACT_ESTATE_METRICS f
+JOIN DIM_SELLER s ON f.seller_key = s.seller_key;
+
+
+
+
+WITH CompanyStats AS (
+    SELECT 
+        s.brokerage_name AS company_name,
+        COUNT(f.metric_key) AS sold_count,
+        -- Рахуємо кількість продажів саме за 2025 рік для подальшого сортування
+        COUNT(CASE WHEN d.year = 2025 THEN 1 END) AS sold_last_year
+    FROM fact_estate_metrics f
+    JOIN dim_seller s ON f.seller_key = s.seller_key
+    JOIN dim_property_details p ON f.property_key = p.property_key
+    JOIN dim_date d ON f.date_key = d.date_key
+    WHERE p.home_status = 'SOLD'
+    GROUP BY s.brokerage_name
+)
+SELECT 
+    company_name,
+    sold_count,
+    -- Кумулятивна сума всіх проданих квартир по компаніях
+    SUM(sold_count) OVER (ORDER BY sold_count DESC) AS cumulative_total_sold
+FROM CompanyStats
+ORDER BY sold_last_year DESC;
+
+
+
+
+
+
+-----------------в стовпчик date.year ми записуватимемо перші 4 значення стовпчика 
