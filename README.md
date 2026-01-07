@@ -67,138 +67,157 @@ ELT proces pozostáva z troch hlavných fáz: extrahovanie (Extract), načítani
 
 ### 3.1 Extract (Extrahovanie dát)
 Dáta zo zdrojového datasetu boli najprv sprístupnené v Snowflake prostredníctvom Marketplace. Pre import súborov tretích strán bolo vytvorené interné stage úložisko:
+
+
+## 4. Vizualizácia dát
+
+Dashboard obsahuje **8 vizualizácií**, ktoré poskytujú komplexný pohľad na kľúčové metriky a trendy na realitnom trhu v Pensylvánii. Tieto vizualizácie odpovedajú na dôležité otázky investorov a umožňujú lepšie pochopiť vzťah medzi cenou, lokalitou a environmentálnymi rizikami.
+
+### Graf 1: Najdrahšie nehnuteľnosti v bezpečných zónach (Nízke riziko)
+Táto vizualizácia identifikuje prémiové nehnuteľnosti, ktoré sa nachádzajú v oblastiach s minimálnym rizikom povodní a požiarov (index < 2). Pomáha investorom nájsť vysoko hodnotné objekty, ktoré sú zároveň dlhodobo chránené pred klimatickými hrozbami.
+
 ```sql
-CREATE OR REPLACE STAGE my_stage;
-
-
-
------найменший ризик будівлі яку затопить------
-
 SELECT 
-    PROPERTY_STREET_ADDRESS,
-    PROPERTY_STATE,
-    CLIMATE_CLIMATE_FLOOD_RISK_VALUE,
-    CLIMATE_CLIMATE_FIRE_RISK_VALUE,
-    PRICE
-FROM properties
-join buildings on buildings.building_key = properties.building_key
-WHERE 
-    CLIMATE_CLIMATE_FLOOD_RISK_VALUE < 2 -- Низький ризик
-    AND CLIMATE_CLIMATE_FIRE_RISK_VALUE < 2 -- Низький ризик
-    AND HOME_STATUS = 'FOR_SALE'
-ORDER BY PRICE DESC
-
-
-
------знайти доступні будинки з мінімум 3 спальнями, ціною до 300,000, відсортовані від найдешевших-----
-
-SELECT 
-    PROPERTY_STREET_ADDRESS, 
-    PROPERTY_CITY, 
-    PRICE, 
-    BEDROOMS, 
-    BATHROOMS, 
-    LIVING_AREA_VALUE
-FROM properties
-WHERE 
-    PRICE <= 300000 and price > 0
-    AND BEDROOMS >= 3
-    AND HOME_STATUS = 'FOR_SALE' -- Припускаємо, що статус "на продаж"
-ORDER BY PRICE ASC
-LIMIT 10;
-
-
-
-
-
----------нові будинки (збудовані після 2020 року), де дозволені тварини та є парк для вигулу-----
-
-SELECT 
-    b.BUILDING_NAME,
-    p.YEAR_BUILT,
-    b.BUILDING_HAS_PET_PARK,
-    b.BUILDING_PET_POLICY_DESCRIPTION,
-    p.price
-FROM buildings b
-JOIN properties p on b.building_key = p.building_key
-WHERE 
-    YEAR_BUILT >= 2020
-    AND (BUILDING_HAS_PET_PARK = TRUE OR RESO_FACTS_PROPERTY_HAS_PETS_ALLOWED = TRUE)
-ORDER BY YEAR_BUILT DESC, price
-LIMIT 10;
-
-
-
-
----------будинки, які користуються найбільшою увагою користувачів (багато переглядів та збережень в обране), але все ще не продані.-------
-
-SELECT 
-    zillow_zpid,
-    PROPERTY_STREET_ADDRESS,
-    PRICE,
-        ZILLOW_FAVORITE_COUNT,
-    ZILLOW_PAGE_VIEW_COUNT,
-    DAYS_ON_ZILLOW
-    FROM properties
-WHERE 
-    HOME_STATUS = 'FOR_SALE' and ZILLOW_PAGE_VIEW_COUNT is not null
-ORDER BY ZILLOW_FAVORITE_COUNT DESC, ZILLOW_PAGE_VIEW_COUNT DESC
-LIMIT 10;
-
-
-
-
-
-Різниця між ціною обєкта та середньою ціною в окрузі (County)
-Чи переплачує клієнт за цей конкретний будинок порівняно з середнім рівнем в окрузі?
-
-SELECT 
-    p.property_key, l.county, f.price,
-    AVG(f.price) OVER (PARTITION BY l.county) as avg_county_price,
-    f.price - AVG(f.price) OVER (PARTITION BY l.county) as price_diff_from_avg
+    p.property_street_address,
+    l.state_name,
+    f.climate_flood_risk_value,
+    f.climate_fire_risk_value,
+    f.estimate_price
 FROM FACT_ESTATE_METRICS f
-JOIN DIM_LOCATION l ON f.location_key = l.location_key;
+JOIN DIM_LOCATION l ON f.location_key = l.location_key
+JOIN DIM_PROPERTY_DETAILS p ON f.property_key = p.property_key
+WHERE f.climate_flood_risk_value < 2 
+  AND f.climate_fire_risk_value < 2 
+  AND p.home_status = 'FOR_SALE'
+ORDER BY f.estimate_price DESC;
+```
 
+### Graf 2: Dostupnosť rodinného bývania (Top 10 najlacnejších)
+Graf zobrazuje 10 najdostupnejších nehnuteľností pre rodiny: minimálne 3 spálne a cena pod 300 000 USD. Táto analýza umožňuje sledovať možnosti pre strednú vrstvu obyvateľstva a identifikovať najvýhodnejšie ponuky na trhu.
 
-
-Накопичувальна сума переглядів для Агента
-Скільки всього уваги привертають обєкти конкретного брокера (Running Total).
-
-SQL
-
+```sql
 SELECT 
-    s.name, s.surname, f.page_view_count,
+    p.property_street_address, 
+    l.city, 
+    f.estimate_price, 
+    p.bedrooms, 
+    p.living_area_value
+FROM FACT_ESTATE_METRICS f
+JOIN DIM_LOCATION l ON f.location_key = l.location_key
+JOIN DIM_PROPERTY_DETAILS p ON f.property_key = p.property_key
+WHERE f.estimate_price <= 300000 AND f.estimate_price > 0
+  AND p.bedrooms >= 3
+  AND p.home_status = 'FOR_SALE'
+ORDER BY f.estimate_price ASC
+LIMIT 10;
+```
+
+### Graf 3: Moderné trendy: Novostavby s vybavením pre zvieratá
+Tento prehľad sa zameriava na moderné budovy postavené po roku 2020, ktoré reflektujú trendy ako "pet-friendly" (parky pre psov). Vizualizácia ukazuje, že nová výstavba sa čoraz viac sústredi na doplnkovú infraštruktúru.
+
+```sql
+SELECT 
+    b.building_name,
+    p.year_built,
+    b.has_pet_park,
+    f.estimate_price
+FROM FACT_ESTATE_METRICS f
+JOIN DIM_BUILDING_INFO b ON f.building_key = b.building_key
+JOIN DIM_PROPERTY_DETAILS p ON f.property_key = p.property_key
+WHERE p.year_built >= 2020
+  AND b.has_pet_park = TRUE
+ORDER BY p.year_built DESC, f.estimate_price;
+```
+
+### Graf 4: Analýza trhového záujmu (Populárne ale nepredané)
+Vizualizácia porovnáva počet zobrazení a uložení do obľúbených pri nehnuteľnostiach, ktoré sú stále na predaj. Identifikuje objekty, ktoré generujú vysoký organický záujem, ale zostávajú na trhu dlšie.
+
+```sql
+SELECT 
+    p.property_zpid,
+    p.property_street_address,
+    f.estimate_price,
+    f.favorite_count,
+    f.page_view_count
+FROM FACT_ESTATE_METRICS f
+JOIN DIM_PROPERTY_DETAILS p ON f.property_key = p.property_key
+WHERE p.home_status = 'FOR_SALE' 
+  AND f.page_view_count IS NOT NULL
+ORDER BY f.favorite_count DESC, f.page_view_count DESC
+LIMIT 10;
+```
+
+### Graf 5: Porovnanie cien voči priemeru okresu (County)
+Táto tabuľka využíva okenné funkcie na výpočet rozdielu medzi cenou konkrétneho domu a priemernou cenou v danom okrese. Umožňuje detegovať podhodnotené alebo naopak luxusné ponuky.
+
+```sql
+SELECT 
+    p.property_key, 
+    l.county, 
+    f.estimate_price,
+    AVG(f.estimate_price) OVER (PARTITION BY l.county) AS avg_county_price,
+    f.estimate_price - AVG(f.estimate_price) OVER (PARTITION BY l.county) AS price_diff_from_avg
+FROM FACT_ESTATE_METRICS f
+JOIN DIM_LOCATION l ON f.location_key = l.location_key
+JOIN DIM_PROPERTY_DETAILS p ON f.property_key = p.property_key;
+```
+
+### Graf 6: Identifikácia podhodnotených investičných príležitostí
+Vizualizácia porovnáva ponukovú cenu s trhovým odhadom (Zestimate). Cieľom je nájsť nehnuteľnosti predávané pod hodnotou, čo pre investora predstavuje okamžitý potenciálny zisk.
+
+```sql
+SELECT 
+    l.city,
+    f.estimate_price AS current_price,
+    f.zillow_zestimate AS market_value,
+    (f.zillow_zestimate - f.estimate_price) AS potential_profit
+FROM FACT_ESTATE_METRICS f
+JOIN DIM_LOCATION l ON f.location_key = l.location_key
+WHERE f.estimate_price < f.zillow_zestimate
+  AND f.estimate_price > 0
+ORDER BY potential_profit DESC
+LIMIT 10;
+```
+
+### Graf 7: Kumulatívna pozornosť používateľov podľa agentov
+Tento graf pomocou okenných funkcií (SUM OVER) sleduje kumulatívny počet zobrazení stránok pre jednotlivých agentov. Umožňuje identifikovať najúspešnejších brokerov, ktorí generujú najväčšiu pozornosť na trhu.
+
+```sql
+SELECT 
+    s.seller_name, 
+    s.agency_name, 
+    f.page_view_count,
     SUM(f.page_view_count) OVER (PARTITION BY s.seller_key ORDER BY f.metric_key) as total_agent_views
 FROM FACT_ESTATE_METRICS f
 JOIN DIM_SELLER s ON f.seller_key = s.seller_key;
+```
 
+### Graf 8: Výkonnosť realitných kancelárií a kumulatívne predaje
+Graf znázorňuje úspešnosť brokerov v roku 2025. Pomocou kumulatívnej sumy môžeme sledovať celkovú predajnú silu najväčších hráčov na trhu v Pensylvánii.
 
-
-
+```sql
 WITH CompanyStats AS (
     SELECT 
-        s.brokerage_name AS company_name,
+        s.agency_name AS company_name,
         COUNT(f.metric_key) AS sold_count,
-        -- Рахуємо кількість продажів саме за 2025 рік для подальшого сортування
         COUNT(CASE WHEN d.year = 2025 THEN 1 END) AS sold_last_year
-    FROM fact_estate_metrics f
-    JOIN dim_seller s ON f.seller_key = s.seller_key
-    JOIN dim_property_details p ON f.property_key = p.property_key
-    JOIN dim_date d ON f.date_key = d.date_key
+    FROM FACT_ESTATE_METRICS f
+    JOIN DIM_SELLER s ON f.seller_key = s.seller_key
+    JOIN DIM_PROPERTY_DETAILS p ON f.property_key = p.property_key
+    JOIN DIM_DATE d ON f.date_key = d.date_key
     WHERE p.home_status = 'SOLD'
-    GROUP BY s.brokerage_name
+    GROUP BY s.agency_name
 )
 SELECT 
     company_name,
     sold_count,
-    -- Кумулятивна сума всіх проданих квартир по компаніях
     SUM(sold_count) OVER (ORDER BY sold_count DESC) AS cumulative_total_sold
 FROM CompanyStats
 ORDER BY sold_last_year DESC;
+```
 
 
 
 
 
 
------------------в стовпчик date.year ми записуватимемо перші 4 значення стовпчика 
