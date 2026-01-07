@@ -294,17 +294,20 @@ Graf zobrazuje 10 najdostupnejších nehnuteľností pre rodiny: minimálne 3 sp
 
 ```sql
 SELECT 
-    p.property_street_address, 
+    CONCAT(COALESCE(l.home_number, ''), ' ', COALESCE(l.street_name, '')) AS property_street_address,
     l.city, 
     f.estimate_price, 
     p.bedrooms, 
-    p.living_area_value
+    p.area,
 FROM FACT_ESTATE_METRICS f
 JOIN DIM_LOCATION l ON f.location_key = l.location_key
 JOIN DIM_PROPERTY_DETAILS p ON f.property_key = p.property_key
-WHERE f.estimate_price <= 300000 AND f.estimate_price > 0
-  AND p.bedrooms >= 3
-  AND p.home_status = 'FOR_SALE'
+WHERE 
+    f.estimate_price <= 300000 
+    AND f.estimate_price > 0
+    AND p.bedrooms >= 3
+    AND p.home_status = 'FOR_SALE'
+
 ORDER BY f.estimate_price ASC
 LIMIT 10;
 ```
