@@ -169,7 +169,7 @@ LEFT JOIN LION_DB_PROJECT_F.PUBLIC.BUILDINGS b
     ON p.BUILDING_KEY = b.BUILDING_KEY;
 ```
 
-### 3.2 Створення dimension та fact таблиць
+### 3.2 Vytvorenie tabuliek dimenzií a faktov
 
 ```sql
 -- DIM_DATE
@@ -232,39 +232,34 @@ SELECT
     architectural_style, has_attached_garage
 FROM LION_MY_LAST_PROJECT.STAGING.STAGING_REAL_ESTATE_FULL;
 
--- FACT_ESTATE_METRICS
-INSERT INTO FACT_ESTATE_METRICS (
-    property_key, building_key, location_key, date_key, seller_key,
-    estimate_price, annual_tax_amount, page_view_count, rent_estimate,
-    included_furniture, monthly_hoa_fee, tax_assessed_value,
-    price_per_square_foot, deposit_fee_min, climate_flood_risk_value,
-    climate_fire_risk_value, favorite_count
+--FACT-ESTATE-METRICS
+INSERT INTO FACT_ESTATE_METRICS (property_key, building_key, date_key, estimate_price, annual_tax_amount, page_view_count, rent_estimate, included_furniture, monthly_hoa_fee, tax_assessed_value,price_per_square_foot, deposit_fee_min, climate_flood_risk_value, 
+climate_fire_risk_value, favorite_count
 )
 SELECT 
-    dp.property_key, db.building_key, dl.location_key, dd.date_key, ds.seller_key,
-    TRY_TO_DOUBLE(stg.estimate_price::TEXT),
-    TRY_TO_DOUBLE(stg.annual_tax_amount::TEXT),
-    TRY_TO_NUMBER(stg.page_view_count::TEXT),
-    TRY_TO_DOUBLE(stg.rent_estimate::TEXT),
+    dp.property_key,
+    db.building_key,
+    dd.date_key,
+    stg.estimate_price,
+    stg.annual_tax_amount,
+    stg.page_view_count,
+    stg.rent_estimate,
     stg.included_furniture,
-    TRY_TO_DOUBLE(stg.monthly_hoa_fee::TEXT),
-    TRY_TO_DOUBLE(stg.tax_assessed_value::TEXT),
-    TRY_TO_DOUBLE(stg.price_per_square_foot::TEXT),
-    TRY_TO_DOUBLE(stg.deposit_fee_min::TEXT),
-    TRY_TO_DOUBLE(stg.climate_flood_risk_value::TEXT),
-    TRY_TO_DOUBLE(stg.climate_fire_risk_value::TEXT),
-    TRY_TO_NUMBER(stg.favorite_count::TEXT)
+    stg.monthly_hoa_fee,
+    stg.tax_assessed_value,
+    stg.price_per_square_foot,
+    stg.deposit_fee_min,
+    stg.climate_flood_risk_value,
+    stg.climate_fire_risk_value,
+    stg.favorite_count
+
 FROM LION_MY_LAST_PROJECT.STAGING.STAGING_REAL_ESTATE_FULL stg
+
 JOIN DIM_PROPERTY_DETAILS dp ON stg.property_zpid = dp.zillow_zpid
-JOIN DIM_DATE dd ON dd.date_key = TRY_TO_NUMBER(TO_CHAR(TO_DATE(TO_TIMESTAMP(TRY_TO_NUMBER(NULLIF(stg.CREATED_TS::TEXT, '')) / 1000000)), 'YYYYMMDD'))
+
+JOIN DIM_DATE dd ON dd.date_key = TO_NUMBER(TO_CHAR(TO_DATE(TO_TIMESTAMP(stg.CREATED_TS / 1000000)), 'YYYYMMDD'))
+
 LEFT JOIN DIM_BUILDING_INFO db ON stg.building_zpid = db.building_zpid
-LEFT JOIN DIM_LOCATION dl 
-    ON COALESCE(stg.street_name::TEXT, 'N/A') = COALESCE(dl.street_name::TEXT, 'N/A')
-    AND COALESCE(stg.zip_code::TEXT, 'N/A') = COALESCE(dl.zip_code::TEXT, 'N/A')
-    AND COALESCE(stg.home_number::TEXT, 'N/A') = COALESCE(dl.home_number::TEXT, 'N/A')
-LEFT JOIN DIM_SELLER ds 
-    ON COALESCE(stg.seller_name::TEXT, 'N/A') = COALESCE(ds.name::TEXT, 'N/A')
-    AND COALESCE(stg.seller_phone::TEXT, 'N/A') = COALESCE(ds.phone_number::TEXT, 'N/A');
 ```
 
 ---
