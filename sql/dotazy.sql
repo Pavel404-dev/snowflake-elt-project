@@ -264,6 +264,8 @@ SELECT
 FROM LION_MY_LAST_PROJECT.STAGING.STAGING_REAL_ESTATE_FULL
 WHERE CREATED_TS IS NOT NULL;
 
+
+
 --dim_location 
 
 INSERT INTO DIM_LOCATION (city, state_name, zip_code, county, neighborhood, home_number, street_name, latitude, longitude, elementary_school, middle_school, high_school, walk_score, walk_score_description, climate_fema_zone, climate_risk_label)
@@ -285,3 +287,27 @@ SELECT
     climate_fema_zone,
     climate_risk_label
 FROM LION_MY_LAST_PROJECT.STAGING.STAGING_REAL_ESTATE_FULL;
+
+
+
+
+--dim_building_info
+INSERT INTO DIM_BUILDING_INFO (building_zpid, building_name, building_type, unit_count, total_stories_in_building, has_swimming_pool, has_elevator, is_smoke_free, transit_score, has_gym, has_pet_park, has_24hr_maintenance, is_student_housing, is_senior_housing, pet_policy_description, security_features)
+SELECT 
+    building_zpid,
+    building_name,
+    building_type,
+    unit_count,
+    NULL as total_stories_in_building, 
+    has_swimming_pool,
+    has_elevator,
+    is_smoke_free,
+    transit_score,
+    FALSE as has_gym,
+    has_pet_park,
+    has_24hr_maintenance,
+    is_student_housing,
+    is_senior_housing,
+    pet_policy_description,
+    security_features
+FROM LION_MY_LAST_PROJECT.STAGING.STAGING_REAL_ESTATE_FULL
