@@ -130,3 +130,21 @@ WHERE
     AND (BUILDING_HAS_PET_PARK = TRUE OR RESO_FACTS_PROPERTY_HAS_PETS_ALLOWED = TRUE)
 ORDER BY YEAR_BUILT DESC, price
 LIMIT 10;
+
+
+
+
+---------будинки, які користуються найбільшою увагою користувачів (багато переглядів та збережень в обране), але все ще не продані.-------
+
+SELECT 
+    zillow_zpid,
+    PROPERTY_STREET_ADDRESS,
+    PRICE,
+        ZILLOW_FAVORITE_COUNT,
+    ZILLOW_PAGE_VIEW_COUNT,
+    DAYS_ON_ZILLOW
+    FROM properties
+WHERE 
+    HOME_STATUS = 'FOR_SALE' and ZILLOW_PAGE_VIEW_COUNT is not null
+ORDER BY ZILLOW_FAVORITE_COUNT DESC, ZILLOW_PAGE_VIEW_COUNT DESC
+LIMIT 10;
