@@ -386,27 +386,33 @@ Vizualizácia porovnáva ponukovú cenu s trhovým odhadom (Zestimate). Cieľom 
 SELECT 
     l.city,
     f.estimate_price AS current_price,
-    f.zillow_zestimate AS market_value,
-    (f.zillow_zestimate - f.estimate_price) AS potential_profit
+    f.rent_estimate AS market_value, 
+    (f.rent_estimate - f.estimate_price) AS potential_profit
 FROM FACT_ESTATE_METRICS f
 JOIN DIM_LOCATION l ON f.location_key = l.location_key
-WHERE f.estimate_price < f.zillow_zestimate
+WHERE f.rent_estimate IS NOT NULL 
+  AND f.estimate_price IS NOT NULL
+  AND f.estimate_price < f.rent_estimate
   AND f.estimate_price > 0
 ORDER BY potential_profit DESC
-LIMIT 10;
-```
+LIMIT 10;```
 
 ### Graf 7: Kumulatívna pozornosť používateľov podľa agentov
 Tento graf pomocou okenných funkcií (SUM OVER) sleduje kumulatívny počet zobrazení stránok pre jednotlivých agentov. Umožňuje identifikovať najúspešnejších brokerov, ktorí generujú najväčšiu pozornosť na trhu.
 
 ```sql
 SELECT 
-    s.seller_name, 
+    s.name AS seller_name, -- Виправлено на name
     s.agency_name, 
     f.page_view_count,
-    SUM(f.page_view_count) OVER (PARTITION BY s.seller_key ORDER BY f.metric_key) as total_agent_views
+    SUM(f.page_view_count) OVER (
+        PARTITION BY s.seller_key 
+        ORDER BY f.property_key 
+    ) as running_total_agent_views,
+    SUM(f.page_view_count) OVER (PARTITION BY s.seller_key) as total_agent_views
 FROM FACT_ESTATE_METRICS f
-JOIN DIM_SELLER s ON f.seller_key = s.seller_key;
+JOIN DIM_SELLER s ON f.seller_key = s.seller_key
+WHERE f.page_view_count IS NOT NULL;
 ```
 
 ### Graf 8: Výkonnosť realitných kancelárií a kumulatívne predaje
