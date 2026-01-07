@@ -15,75 +15,62 @@ Zdrojové dáta pochádzajú z datasetu **US Real Estate Properties** od poskyto
 ### 1.1 Detailný popis staging tabuliek
 
 #### A. Tabuľka `buildings` (Metadata budov a infraštruktúra)
-Táto tabuľka slúži ako číselník objektov a komplexov, v ktorých sa nehnuteľnosti nachádzajú. Obsahuje 115 stĺpcov zameraných na širší kontext budovy.
-* **Identifikátory:** `building_key` (PK), `building_zpid` (identifikátor Zillow).
-* **Lokalita a normalizácia adries:** Obsahuje surové aj normalizované adresné údaje (`normalized_city`, `normalized_state_name`, `normalized_zip_code`), čo zabezpečuje vysokú presnosť pri geografickom mapovaní.
-* **Občianska vybavenosť (Amenities):** Detailné informácie o spoločných priestoroch a vybavení (bazén, posilňovňa, výťah, 24-hodinová údržba, park pre domáce zvieratá).
-* **Indexy mobility:** `building_walk_score`, `building_transit_score` a `building_bike_score`, ktoré definujú kvalitu lokality z pohľadu dopravy a dostupnosti.
-* **Pravidlá a poplatky:** Informácie o depozitoch, poplatkoch za prihlášku (`application_fee`) a podrobných pravidlách pre zvieratá (`pet_policy_description`).
+Táto tabuľka slúži ako číselník objektov a komplexov, v ktorých sa nehnuteľnosti nachádzajú.
+* **Identifikátory:** `building_key`, `building_zpid`.
+* **Lokalita:** Normalizované adresné údaje (`normalized_city`, `normalized_zip_code`).
+* **Občianska vybavenosť:** Bazén, posilňovňa, výťah, pet park.
+* **Indexy mobility:** `walk_score`, `transit_score`, `bike_score`.
 
 #### B. Tabuľka `properties` (Detaily ponúk a finančné metriky)
-Táto tabuľka predstavuje jadro analýzy, nakoľko obsahuje konkrétne ponuky nehnuteľností, ich fyzický stav a finančnú históriu. Obsahuje 73 stĺpcov.
-* **Finančné ukazovatele:** Aktuálna cena (`price`), trhový odhad (`zillow_zestimate`), ročné dane (`reso_facts_tax_annual_amount`), mesačné poplatky.
-* **Fyzické charakteristiky:** Počet spální (`bedrooms`), kúpeľní, rok výstavby (`year_built`), rozloha obytnej plochy (`living_area_value`) a architektonický štýl.
-* **Environmentálne a klimatické riziká:** Indexy povodňového (`flood_risk_value`) a požiarneho rizika vrátane klasifikácie FEMA zón.
-* **Marketingové dáta:** Popularita ponuky vyjadrená cez `zillow_page_view_count` a `zillow_favorite_count`.
-* **Vzdelanie:** Dáta o priradených školských obvodoch (základné, stredné a vysoké školy).
-* **Informácie o predajcoch:** Údaje o agentoch a brokerských spoločnostiach (`brokerage_name`, `attribution_agent_license_number`).
+* **Finančné ukazovatele:** Cena, Zestimate, ročné dane, mesačné poplatky.
+* **Fyzické charakteristiky:** Počet spální, kúpeľní, rok výstavby, rozloha.
+* **Environmentálne riziká:** Povodňové a požiarne riziká (FEMA zóny).
 
 ### 1.2 Dátová architektúra
 
 #### ERD diagram
-Surové dáta sú v staging vrstve prepojené prostredníctvom identifikátora **building_key**, kde jedna budova (`buildings`) môže obsahovať viacero konkrétnych nehnuteľností/jednotiek (`properties`).
-
-
+Surové dáta sú v staging vrstve prepojené prostredníctvom identifikátora **building_key**.
 
 ![ERD Diagram](img/startSchemaFinal.png)
-
-*Obrázok 1 Entitno-relačná schéma zdrojových dát (Staging layer)*
+*Obrázok 1: Entitno-relačná schéma zdrojových dát (Staging layer)*
 
 ---
 
 ## 2. Dimenzionálny model
 
-V projekte bola navrhnutá **schéma hviezdy (star schema)** podľa Kimballovej metodológie. Táto štruktúra obsahuje jednu tabuľku faktov **`fact_estate_metrics`**, ktorá je prepojená so patmi dimenziami:
+V projekte bola navrhnutá **schéma hviezdy (star schema)** podľa Kimballovej metodológie:
 
-* **`dim_property_details`**: Obsahuje podrobné fyzické informácie o nehnuteľnosti (typ stavby, počet izieb, rozloha, materiál).
-* **`dim_building_info`**: Zahŕňa údaje o budove ako celku (počet jednotiek, vybavenie ako posilňovňa či bazén, bezpečnostné prvky).
-* **`dim_location`**: Obsahuje geografické dáta vrátane informácií o školských obvodoch a indexoch dostupnosti (Walk Score).
-* **`dim_seller`**: Údaje o agentoch, ich licenciách a pridružených brokerských spoločnostiach.
-* **`dim_date`**: Podrobná časová dimenzia pre analýzu trendov (deň, mesiac, štvrťrok, víkendy).
-  
-Štruktúra hviezdicového modelu je znázornená na diagrame nižšie:
+* **`fact_estate_metrics`**: Hlavná tabuľka faktov s finančnými a popularitnými metrikami.
+* **`dim_property_details`**: Fyzické informácie o nehnuteľnosti.
+* **`dim_building_info`**: Údaje o budove a jej vybavení.
+* **`dim_location`**: Geografické dáta a školské obvody.
+* **`dim_seller`**: Údaje o agentoch a kanceláriách.
+* **`dim_date`**: Časová dimenzia pre analýzu trendov.
 
 ![Star Schema](img/FinalStarSchema.png)
-*Obrázok 2 Schéma hviezdy pre US Real Estate Analytics*
+*Obrázok 2: Schéma hviezdy pre US Real Estate Analytics*
 
 ---
 
 ## 3. ELT proces v Snowflake
 
-ELT proces pozostáva z troch hlavných fáz: extrahovanie (Extract), načítanie (Load) a transformácia (Transform).
-
 ### 3.1 Extract (Extrahovanie dát)
-Dáta zo zdrojového datasetu boli najprv sprístupnené v Snowflake prostredníctvom Marketplace. Pre import súborov tretích strán bolo vytvorené interné stage úložisko:
-
 
 ```sql
--- Створення бази даних та схеми
+-- Vytvorenie databázy a schémy
 CREATE DATABASE IF NOT EXISTS LION_MY_LAST_PROJECT;
 CREATE SCHEMA IF NOT EXISTS LION_MY_LAST_PROJECT.STAGING;
 
--- Створення staging таблиці
+-- Vytvorenie staging tabuľky spojením properties a buildings
 CREATE OR REPLACE TABLE LION_MY_LAST_PROJECT.STAGING.STAGING_REAL_ESTATE_FULL AS
 SELECT DISTINCT
-    -- ІДЕНТИФІКАТОРИ
+    -- IDENTIFIKÁTORY
     p.ZILLOW_ZPID AS property_zpid,
     p.ID AS property_internal_id,
     p.BUILDING_KEY,
     b.BUILDING_ZPID AS building_zpid,
     
-    -- МЕТРИКИ
+    -- METRIKY
     p.PRICE AS estimate_price,
     p.RESO_FACTS_TAX_ANNUAL_AMOUNT AS annual_tax_amount,
     p.ZILLOW_PAGE_VIEW_COUNT AS page_view_count,
@@ -97,7 +84,7 @@ SELECT DISTINCT
     p.climate_CLIMATE_FIRE_RISK_VALUE as climate_fire_risk_value,
     p.ZILLOW_FAVORITE_COUNT AS favorite_count,
 
-    -- ДЕТАЛІ КВАРТИРИ
+    -- DETAILY NEHNUTEĽNOSTI
     p.HOME_TYPE,
     p.HOME_STATUS,
     p.YEAR_BUILT,
@@ -117,7 +104,7 @@ SELECT DISTINCT
     p.RESO_FACTS_STRUCTURE_ARCHITECTURAL_STYLE AS architectural_style,
     p.RESO_FACTS_STRUCTURE_HAS_ATTACHED_GARAGE AS has_attached_garage,
 
-    -- БУДІВЛЯ
+    -- BUDOVA
     b.BUILDING_NAME,
     b.BUILDING_TYPE,
     b.BUILDING_UNIT_COUNT AS unit_count,
@@ -132,7 +119,7 @@ SELECT DISTINCT
     b.BUILDING_PET_POLICY_DESCRIPTION AS pet_policy_description,
     b.BUILDING_SECURITY_TYPES AS security_features,
 
-    -- ЛОКАЦІЯ
+    -- LOKALITA
     p.PROPERTY_CITY AS city,
     p.PROPERTY_STATE AS state_name,
     p.PROPERTY_ZIPCODE AS zip_code,
@@ -150,11 +137,11 @@ SELECT DISTINCT
     p.climate_CLIMATE_FEMA_ZONE as climate_fema_zone,
     p.climate_CLIMATE_FLOOD_RISK_LABEL AS climate_risk_label,
 
-    -- ДАТА
+    -- DÁTUM
     p.CREATED_TS, 
     p.DATE_POSTED_STRING,
 
-    -- ПРОДАВЕЦЬ
+    -- PREDAJCA
     p.ATTRIBUTION_AGENT_NAME AS seller_name,
     p.ATTRIBUTION_AGENT_PHONE_NUMBER AS seller_phone,
     p.ATTRIBUTION_BROKER_NAME AS agency_name,
@@ -167,7 +154,6 @@ SELECT DISTINCT
 FROM LION_DB_PROJECT_F.PUBLIC.PROPERTIES p
 LEFT JOIN LION_DB_PROJECT_F.PUBLIC.BUILDINGS b 
     ON p.BUILDING_KEY = b.BUILDING_KEY;
-```
 
 ### 3.2 Vytvorenie tabuliek dimenzií a faktov
 
@@ -401,7 +387,8 @@ WHERE f.rent_estimate IS NOT NULL
   AND f.estimate_price < f.rent_estimate
   AND f.estimate_price > 0
 ORDER BY potential_profit DESC
-LIMIT 10;```
+LIMIT 10;
+```
 
 ### Graf 7: Kumulatívna pozornosť používateľov podľa agentov
 Tento graf pomocou okenných funkcií (SUM OVER) sleduje kumulatívny počet zobrazení stránok pre jednotlivých agentov. Umožňuje identifikovať najúspešnejších brokerov, ktorí generujú najväčšiu pozornosť na trhu.
@@ -443,4 +430,5 @@ SELECT
     sold_last_year,
     SUM(total_count) OVER (ORDER BY total_count DESC) AS cumulative_total_sold
 FROM CompanyStats
-ORDER BY sold_last_year DESC;```
+ORDER BY sold_last_year DESC;
+```
