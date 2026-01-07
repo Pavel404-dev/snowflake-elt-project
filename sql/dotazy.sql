@@ -311,3 +311,53 @@ SELECT
     pet_policy_description,
     security_features
 FROM LION_MY_LAST_PROJECT.STAGING.STAGING_REAL_ESTATE_FULL
+
+
+--dim_seller
+
+INSERT INTO DIM_SELLER (name, surname, phone_number, agency_name, agent_license_number, agent_email, brokerage_name, broker_phone_number, is_premier_agent)
+SELECT 
+    seller_name,
+    SPLIT_PART(seller_name, ' ', -1) as surname,
+    seller_phone,
+    agency_name,
+    agent_license,
+    agent_email,
+    brokerage_name,
+    broker_phone,
+    is_premier_agent
+FROM LION_MY_LAST_PROJECT.STAGING.STAGING_REAL_ESTATE_FULL;
+
+
+
+
+--dim_property_details
+
+INSERT INTO DIM_PROPERTY_DETAILS (zillow_zpid, home_type, home_status, year_built, total_stories, room_count, structure_type, roof_type, heating_source, is_new, description, area, bedrooms, bathrooms, mls_id, parcel_id, lot_size_dimensions, architectural_style, has_attached_garage)
+SELECT 
+    property_zpid,
+    home_type,
+    home_status,
+    TO_DATE(TO_VARCHAR(year_built), 'YYYY') as year_built,
+    total_stories_property,
+    REGEXP_COUNT(room_count_raw, 'roomType') as room_count,
+    structure_type,
+    roof_type,
+    heating_source,
+    is_new,
+    property_description,
+    area,
+    bedrooms,
+    bathrooms,
+    mls_id,
+    parcel_id,
+    lot_size_dimensions,
+    architectural_style,
+    has_attached_garage
+FROM LION_MY_LAST_PROJECT.STAGING.STAGING_REAL_ESTATE_FULL;
+
+
+
+
+--fact_estate_metrics
+
