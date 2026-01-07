@@ -110,3 +110,23 @@ WHERE
     AND HOME_STATUS = 'FOR_SALE' -- Припускаємо, що статус "на продаж"
 ORDER BY PRICE ASC
 LIMIT 10;
+
+
+
+
+
+---------нові будинки (збудовані після 2020 року), де дозволені тварини та є парк для вигулу-----
+
+SELECT 
+    b.BUILDING_NAME,
+    p.YEAR_BUILT,
+    b.BUILDING_HAS_PET_PARK,
+    b.BUILDING_PET_POLICY_DESCRIPTION,
+    p.price
+FROM buildings b
+JOIN properties p on b.building_key = p.building_key
+WHERE 
+    YEAR_BUILT >= 2020
+    AND (BUILDING_HAS_PET_PARK = TRUE OR RESO_FACTS_PROPERTY_HAS_PETS_ALLOWED = TRUE)
+ORDER BY YEAR_BUILT DESC, price
+LIMIT 10;
