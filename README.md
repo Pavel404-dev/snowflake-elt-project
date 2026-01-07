@@ -69,6 +69,202 @@ ELT proces pozostáva z troch hlavných fáz: extrahovanie (Extract), načítani
 Dáta zo zdrojového datasetu boli najprv sprístupnené v Snowflake prostredníctvom Marketplace. Pre import súborov tretích strán bolo vytvorené interné stage úložisko:
 
 
+```sql
+-- Створення бази даних та схеми
+CREATE DATABASE IF NOT EXISTS LION_MY_LAST_PROJECT;
+CREATE SCHEMA IF NOT EXISTS LION_MY_LAST_PROJECT.STAGING;
+
+-- Створення staging таблиці
+CREATE OR REPLACE TABLE LION_MY_LAST_PROJECT.STAGING.STAGING_REAL_ESTATE_FULL AS
+SELECT DISTINCT
+    -- ІДЕНТИФІКАТОРИ
+    p.ZILLOW_ZPID AS property_zpid,
+    p.ID AS property_internal_id,
+    p.BUILDING_KEY,
+    b.BUILDING_ZPID AS building_zpid,
+    
+    -- МЕТРИКИ
+    p.PRICE AS estimate_price,
+    p.RESO_FACTS_TAX_ANNUAL_AMOUNT AS annual_tax_amount,
+    p.ZILLOW_PAGE_VIEW_COUNT AS page_view_count,
+    p.ZILLOW_RENT_ZESTIMATE AS rent_estimate,
+    b.BUILDING_IS_FURNISHED AS included_furniture,
+    p.MONTHLY_HOA_FEE,
+    p.RESO_FACTS_TAX_ASSESSED_VALUE AS tax_assessed_value,
+    p.RESO_FACTS_PROPERTY_PRICE_PER_SQUARE_FOOT AS price_per_square_foot,
+    b.BUILDING_DEPOSIT_FEE_MIN AS deposit_fee_min,
+    p.climate_climate_flood_risk_value as climate_flood_risk_value,
+    p.climate_CLIMATE_FIRE_RISK_VALUE as climate_fire_risk_value,
+    p.ZILLOW_FAVORITE_COUNT AS favorite_count,
+
+    -- ДЕТАЛІ КВАРТИРИ
+    p.HOME_TYPE,
+    p.HOME_STATUS,
+    p.YEAR_BUILT,
+    p.RESO_FACTS_STRUCTURE_STORIES_TOTAL AS total_stories_property,
+    p.RESO_FACTS_AMENITY_ROOMS AS room_count_raw,
+    p.RESO_FACTS_STRUCTURE_TYPE AS structure_type,
+    p.RESO_FACTS_STRUCTURE_ROOF_TYPE AS roof_type,
+    p.RESO_FACTS_UTILITY_HEATING AS heating_source,
+    p.IS_NEW_HOME AS is_new,
+    p.DESCRIPTION AS property_description,
+    p.LIVING_AREA_VALUE AS area,
+    p.BEDROOMS,
+    p.BATHROOMS,
+    p.MLSID AS mls_id,
+    p.PARCEL_ID,
+    p.RESO_FACTS_PROPERTY_LOT_SIZE_DIMENSIONS AS lot_size_dimensions,
+    p.RESO_FACTS_STRUCTURE_ARCHITECTURAL_STYLE AS architectural_style,
+    p.RESO_FACTS_STRUCTURE_HAS_ATTACHED_GARAGE AS has_attached_garage,
+
+    -- БУДІВЛЯ
+    b.BUILDING_NAME,
+    b.BUILDING_TYPE,
+    b.BUILDING_UNIT_COUNT AS unit_count,
+    b.BUILDING_HAS_SWIMMING_POOL AS has_swimming_pool,
+    b.BUILDING_HAS_ELEVATOR AS has_elevator,
+    b.BUILDING_IS_SMOKE_FREE AS is_smoke_free,
+    b.BUILDING_TRANSIT_SCORE AS transit_score,
+    b.BUILDING_HAS_PET_PARK AS has_pet_park, 
+    b.BUILDING_HAS_24HR_MAINTENANCE AS has_24hr_maintenance,
+    b.BUILDING_IS_STUDENT_HOUSING AS is_student_housing,
+    b.BUILDING_IS_SENIOR_HOUSING AS is_senior_housing,
+    b.BUILDING_PET_POLICY_DESCRIPTION AS pet_policy_description,
+    b.BUILDING_SECURITY_TYPES AS security_features,
+
+    -- ЛОКАЦІЯ
+    p.PROPERTY_CITY AS city,
+    p.PROPERTY_STATE AS state_name,
+    p.PROPERTY_ZIPCODE AS zip_code,
+    p.COUNTY,
+    p.PROPERTY_NEIGHBORHOOD AS neighborhood,
+    p.NORMALIZED_ADDRESS_NUMBER AS home_number,
+    p.NORMALIZED_STREET_NAME AS street_name,
+    p.LATITUDE,
+    p.LONGITUDE,
+    p.RESO_FACTS_PROPERTY_ELEMENTARY_SCHOOL AS elementary_school,
+    p.RESO_FACTS_PROPERTY_MIDDLE_SCHOOL AS middle_school,
+    p.RESO_FACTS_PROPERTY_HIGH_SCHOOL AS high_school,
+    b.BUILDING_WALK_SCORE AS walk_score,
+    b.BUILDING_WALK_SCORE_DESCRIPTION AS walk_score_description,
+    p.climate_CLIMATE_FEMA_ZONE as climate_fema_zone,
+    p.climate_CLIMATE_FLOOD_RISK_LABEL AS climate_risk_label,
+
+    -- ДАТА
+    p.CREATED_TS, 
+    p.DATE_POSTED_STRING,
+
+    -- ПРОДАВЕЦЬ
+    p.ATTRIBUTION_AGENT_NAME AS seller_name,
+    p.ATTRIBUTION_AGENT_PHONE_NUMBER AS seller_phone,
+    p.ATTRIBUTION_BROKER_NAME AS agency_name,
+    p.ATTRIBUTION_AGENT_LICENSE_NUMBER AS agent_license,
+    p.ATTRIBUTION_AGENT_EMAIL AS agent_email,
+    p.BROKERAGE_NAME,
+    p.ATTRIBUTION_BROKER_PHONE_NUMBER AS broker_phone,
+    p.ZILLOW_IS_PREMIER_BUILDER AS is_premier_agent
+
+FROM LION_DB_PROJECT_F.PUBLIC.PROPERTIES p
+LEFT JOIN LION_DB_PROJECT_F.PUBLIC.BUILDINGS b 
+    ON p.BUILDING_KEY = b.BUILDING_KEY;
+```
+
+### 3.2 Vytvorenie tabuliek dimenzií a faktov
+
+```sql
+-- DIM_DATE
+INSERT INTO DIM_DATE (date_key, full_date, year, quarter, month, month_name, day_of_week, day_name, week_of_year, is_weekend, is_holiday, fiscal_quarter)
+SELECT 
+    TO_NUMBER(TO_CHAR(TO_DATE(TO_TIMESTAMP(CREATED_TS / 1000000)), 'YYYYMMDD')) as date_key,
+    TO_DATE(TO_TIMESTAMP(CREATED_TS / 1000000)) as full_date,
+    YEAR(TO_DATE(TO_TIMESTAMP(CREATED_TS / 1000000))) as year,
+    QUARTER(TO_DATE(TO_TIMESTAMP(CREATED_TS / 1000000))) as quarter,
+    MONTH(TO_DATE(TO_TIMESTAMP(CREATED_TS / 1000000))) as month,
+    MONTHNAME(TO_DATE(TO_TIMESTAMP(CREATED_TS / 1000000))) as month_name,
+    DAYOFWEEKISO(TO_DATE(TO_TIMESTAMP(CREATED_TS / 1000000))) as day_of_week,
+    DAYNAME(TO_DATE(TO_TIMESTAMP(CREATED_TS / 1000000))) as day_name,
+    WEEKISO(TO_DATE(TO_TIMESTAMP(CREATED_TS / 1000000))) as week_of_year,
+    IFF(DAYOFWEEKISO(TO_DATE(TO_TIMESTAMP(CREATED_TS / 1000000))) IN (6, 7), TRUE, FALSE) as is_weekend,
+    FALSE as is_holiday,
+    CASE 
+        WHEN QUARTER(TO_DATE(TO_TIMESTAMP(CREATED_TS / 1000000))) = 1 THEN 1 
+        ELSE QUARTER(TO_DATE(TO_TIMESTAMP(CREATED_TS / 1000000))) 
+    END as fiscal_quarter
+FROM LION_MY_LAST_PROJECT.STAGING.STAGING_REAL_ESTATE_FULL
+WHERE CREATED_TS IS NOT NULL;
+
+-- DIM_LOCATION
+INSERT INTO DIM_LOCATION (city, state_name, zip_code, county, neighborhood, home_number, street_name, latitude, longitude, elementary_school, middle_school, high_school, walk_score, walk_score_description, climate_fema_zone, climate_risk_label)
+SELECT 
+    city, state_name, zip_code, county, neighborhood, home_number, street_name,
+    latitude, longitude, elementary_school, middle_school, high_school,
+    walk_score, walk_score_description, climate_fema_zone, climate_risk_label
+FROM LION_MY_LAST_PROJECT.STAGING.STAGING_REAL_ESTATE_FULL;
+
+-- DIM_BUILDING_INFO
+INSERT INTO DIM_BUILDING_INFO (building_zpid, building_name, building_type, unit_count, total_stories_in_building, has_swimming_pool, has_elevator, is_smoke_free, transit_score, has_gym, has_pet_park, has_24hr_maintenance, is_student_housing, is_senior_housing, pet_policy_description, security_features)
+SELECT 
+    building_zpid, building_name, building_type, unit_count,
+    NULL as total_stories_in_building, 
+    has_swimming_pool, has_elevator, is_smoke_free, transit_score,
+    FALSE as has_gym, has_pet_park, has_24hr_maintenance,
+    is_student_housing, is_senior_housing, pet_policy_description, security_features
+FROM LION_MY_LAST_PROJECT.STAGING.STAGING_REAL_ESTATE_FULL;
+
+-- DIM_SELLER
+INSERT INTO DIM_SELLER (name, surname, phone_number, agency_name, agent_license_number, agent_email, brokerage_name, broker_phone_number, is_premier_agent)
+SELECT 
+    seller_name,
+    SPLIT_PART(seller_name, ' ', -1) as surname,
+    seller_phone, agency_name, agent_license, agent_email,
+    brokerage_name, broker_phone, is_premier_agent
+FROM LION_MY_LAST_PROJECT.STAGING.STAGING_REAL_ESTATE_FULL;
+
+-- DIM_PROPERTY_DETAILS
+INSERT INTO DIM_PROPERTY_DETAILS (zillow_zpid, home_type, home_status, year_built, total_stories, room_count, structure_type, roof_type, heating_source, is_new, description, area, bedrooms, bathrooms, mls_id, parcel_id, lot_size_dimensions, architectural_style, has_attached_garage)
+SELECT 
+    property_zpid, home_type, home_status,
+    TO_DATE(TO_VARCHAR(year_built), 'YYYY') as year_built,
+    total_stories_property,
+    REGEXP_COUNT(room_count_raw, 'roomType') as room_count,
+    structure_type, roof_type, heating_source, is_new, property_description,
+    area, bedrooms, bathrooms, mls_id, parcel_id, lot_size_dimensions,
+    architectural_style, has_attached_garage
+FROM LION_MY_LAST_PROJECT.STAGING.STAGING_REAL_ESTATE_FULL;
+
+--FACT-ESTATE-METRICS
+INSERT INTO FACT_ESTATE_METRICS (property_key, building_key, date_key, estimate_price, annual_tax_amount, page_view_count, rent_estimate, included_furniture, monthly_hoa_fee, tax_assessed_value,price_per_square_foot, deposit_fee_min, climate_flood_risk_value, 
+climate_fire_risk_value, favorite_count
+)
+SELECT 
+    dp.property_key,
+    db.building_key,
+    dd.date_key,
+    stg.estimate_price,
+    stg.annual_tax_amount,
+    stg.page_view_count,
+    stg.rent_estimate,
+    stg.included_furniture,
+    stg.monthly_hoa_fee,
+    stg.tax_assessed_value,
+    stg.price_per_square_foot,
+    stg.deposit_fee_min,
+    stg.climate_flood_risk_value,
+    stg.climate_fire_risk_value,
+    stg.favorite_count
+
+FROM LION_MY_LAST_PROJECT.STAGING.STAGING_REAL_ESTATE_FULL stg
+
+JOIN DIM_PROPERTY_DETAILS dp ON stg.property_zpid = dp.zillow_zpid
+
+JOIN DIM_DATE dd ON dd.date_key = TO_NUMBER(TO_CHAR(TO_DATE(TO_TIMESTAMP(stg.CREATED_TS / 1000000)), 'YYYYMMDD'))
+
+LEFT JOIN DIM_BUILDING_INFO db ON stg.building_zpid = db.building_zpid
+```
+
+---
+
+
 ## 4. Vizualizácia dát
 
 Dashboard obsahuje **8 vizualizácií**, ktoré poskytujú komplexný pohľad na kľúčové metriky a trendy na realitnom trhu v Pensylvánii. Tieto vizualizácie odpovedajú na dôležité otázky investorov a umožňujú lepšie pochopiť vzťah medzi cenou, lokalitou a environmentálnymi rizikami.
@@ -78,8 +274,8 @@ Táto vizualizácia identifikuje prémiové nehnuteľnosti, ktoré sa nachádzaj
 
 ```sql
 SELECT 
-    p.property_street_address,
-    l.state_name,
+    l.street_name, 
+    l.city,
     f.climate_flood_risk_value,
     f.climate_fire_risk_value,
     f.estimate_price
@@ -89,6 +285,7 @@ JOIN DIM_PROPERTY_DETAILS p ON f.property_key = p.property_key
 WHERE f.climate_flood_risk_value < 2 
   AND f.climate_fire_risk_value < 2 
   AND p.home_status = 'FOR_SALE'
+  and l.street_name is not null
 ORDER BY f.estimate_price DESC;
 ```
 
@@ -215,9 +412,3 @@ SELECT
 FROM CompanyStats
 ORDER BY sold_last_year DESC;
 ```
-
-
-
-
-
-
