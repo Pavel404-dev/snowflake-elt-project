@@ -334,18 +334,21 @@ Vizualizácia porovnáva počet zobrazení a uložení do obľúbených pri nehn
 
 ```sql
 SELECT 
-    p.property_zpid,
-    p.property_street_address,
+    p.zillow_zpid,
+    CONCAT(COALESCE(l.home_number, ''), ' ', COALESCE(l.street_name, '')) AS property_street_address,
     f.estimate_price,
     f.favorite_count,
     f.page_view_count
 FROM FACT_ESTATE_METRICS f
 JOIN DIM_PROPERTY_DETAILS p ON f.property_key = p.property_key
-WHERE p.home_status = 'FOR_SALE' 
-  AND f.page_view_count IS NOT NULL
-ORDER BY f.favorite_count DESC, f.page_view_count DESC
-LIMIT 10;
-```
+JOIN DIM_LOCATION l ON f.location_key = l.location_key
+WHERE 
+    p.home_status = 'FOR_SALE' 
+    AND f.page_view_count IS NOT NULL
+ORDER BY 
+    f.favorite_count DESC, 
+    f.page_view_count DESC
+LIMIT 10;```
 
 ### Graf 5: Porovnanie cien voči priemeru okresu (County)
 Táto tabuľka využíva okenné funkcie na výpočet rozdielu medzi cenou konkrétneho domu a priemernou cenou v danom okrese. Umožňuje detegovať podhodnotené alebo naopak luxusné ponuky.
