@@ -427,8 +427,8 @@ Graf znázorňuje úspešnosť brokerov v roku 2025. Pomocou kumulatívnej sumy 
 ```sql
 WITH CompanyStats AS (
     SELECT 
-        s.agency_name AS company_name,
-        COUNT(f.metric_key) AS sold_count,
+        COALESCE(s.agency_name, 'NULL') AS company_name,
+        COUNT(f.property_key) AS total_count,
         COUNT(CASE WHEN d.year = 2025 THEN 1 END) AS sold_last_year
     FROM FACT_ESTATE_METRICS f
     JOIN DIM_SELLER s ON f.seller_key = s.seller_key
@@ -439,8 +439,8 @@ WITH CompanyStats AS (
 )
 SELECT 
     company_name,
-    sold_count,
-    SUM(sold_count) OVER (ORDER BY sold_count DESC) AS cumulative_total_sold
+    total_count,
+    sold_last_year,
+    SUM(total_count) OVER (ORDER BY total_count DESC) AS cumulative_total_sold
 FROM CompanyStats
-ORDER BY sold_last_year DESC;
-```
+ORDER BY sold_last_year DESC;```
