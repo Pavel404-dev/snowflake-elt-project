@@ -75,6 +75,9 @@ group by
 
 вирахувати скільки $ за м2
 
+
+-----найменший ризик будівлі яку затопить------
+
 SELECT 
     PROPERTY_STREET_ADDRESS,
     PROPERTY_STATE,
@@ -89,3 +92,21 @@ WHERE
     AND HOME_STATUS = 'FOR_SALE'
 ORDER BY PRICE DESC
 
+
+
+-----знайти доступні будинки з мінімум 3 спальнями, ціною до 300,000, відсортовані від найдешевших-----
+
+SELECT 
+    PROPERTY_STREET_ADDRESS, 
+    PROPERTY_CITY, 
+    PRICE, 
+    BEDROOMS, 
+    BATHROOMS, 
+    LIVING_AREA_VALUE
+FROM properties
+WHERE 
+    PRICE <= 300000 and price > 0
+    AND BEDROOMS >= 3
+    AND HOME_STATUS = 'FOR_SALE' -- Припускаємо, що статус "на продаж"
+ORDER BY PRICE ASC
+LIMIT 10;
