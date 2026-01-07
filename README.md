@@ -274,8 +274,8 @@ Táto vizualizácia identifikuje prémiové nehnuteľnosti, ktoré sa nachádzaj
 
 ```sql
 SELECT 
-    p.property_street_address,
-    l.state_name,
+    l.street_name, 
+    l.city,
     f.climate_flood_risk_value,
     f.climate_fire_risk_value,
     f.estimate_price
@@ -285,6 +285,7 @@ JOIN DIM_PROPERTY_DETAILS p ON f.property_key = p.property_key
 WHERE f.climate_flood_risk_value < 2 
   AND f.climate_fire_risk_value < 2 
   AND p.home_status = 'FOR_SALE'
+  and l.street_name is not null
 ORDER BY f.estimate_price DESC;
 ```
 
@@ -411,9 +412,3 @@ SELECT
 FROM CompanyStats
 ORDER BY sold_last_year DESC;
 ```
-
-
-
-
-
-
