@@ -382,6 +382,9 @@ ORDER BY price_diff_from_avg desc
 LIMIT 100;
 ```
 
+![Star Schema](img/image5.png)
+
+
 ### Graf 6: Identifikácia podhodnotených investičných príležitostí
 Vizualizácia porovnáva ponukovú cenu s trhovým odhadom (Zestimate). Cieľom je nájsť nehnuteľnosti predávané pod hodnotou, čo pre investora predstavuje okamžitý potenciálny zisk.
 
