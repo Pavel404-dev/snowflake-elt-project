@@ -357,6 +357,9 @@ ORDER BY
 LIMIT 10;
 ```
 
+![Star Schema](img/image4.png)
+
+
 ### Graf 5: Porovnanie cien voči priemeru okresu (County)
 Táto tabuľka využíva okenné funkcie na výpočet rozdielu medzi cenou konkrétneho domu a priemernou cenou v danom okrese. Umožňuje detegovať podhodnotené alebo naopak luxusné ponuky.
 
@@ -378,6 +381,9 @@ WHERE
 ORDER BY price_diff_from_avg desc
 LIMIT 100;
 ```
+
+![Star Schema](img/image5.png)
+
 
 ### Graf 6: Identifikácia podhodnotených investičných príležitostí
 Vizualizácia porovnáva ponukovú cenu s trhovým odhadom (Zestimate). Cieľom je nájsť nehnuteľnosti predávané pod hodnotou, čo pre investora predstavuje okamžitý potenciálny zisk.
