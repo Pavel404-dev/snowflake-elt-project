@@ -34,7 +34,7 @@ Táto tabuľka predstavuje jadro analýzy, nakoľko obsahuje konkrétne ponuky n
 ### 1.2 Dátová architektúra
 
 #### ERD diagram
-Surové dáta sú v staging vrstve prepojené prostredníctvom identifikátora **ZPID** (Zillow Property ID), kde jedna budova (`buildings`) môže obsahovať viacero konkrétnych nehnuteľností/jednotiek (`properties`).
+Surové dáta sú v staging vrstve prepojené prostredníctvom identifikátora **building_key**, kde jedna budova (`buildings`) môže obsahovať viacero konkrétnych nehnuteľností/jednotiek (`properties`).
 
 
 
@@ -46,15 +46,14 @@ Surové dáta sú v staging vrstve prepojené prostredníctvom identifikátora *
 
 ## 2. Dimenzionálny model
 
-V projekte bola navrhnutá **schéma hviezdy (star schema)** podľa Kimballovej metodológie. Táto štruktúra obsahuje jednu tabuľku faktov **`fact_estate_metrics`**, ktorá je prepojená so šiestimi dimenziami:
+V projekte bola navrhnutá **schéma hviezdy (star schema)** podľa Kimballovej metodológie. Táto štruktúra obsahuje jednu tabuľku faktov **`fact_estate_metrics`**, ktorá je prepojená so patmi dimenziami:
 
 * **`dim_property_details`**: Obsahuje podrobné fyzické informácie o nehnuteľnosti (typ stavby, počet izieb, rozloha, materiál).
 * **`dim_building_info`**: Zahŕňa údaje o budove ako celku (počet jednotiek, vybavenie ako posilňovňa či bazén, bezpečnostné prvky).
 * **`dim_location`**: Obsahuje geografické dáta vrátane informácií o školských obvodoch a indexoch dostupnosti (Walk Score).
 * **`dim_seller`**: Údaje o agentoch, ich licenciách a pridružených brokerských spoločnostiach.
 * **`dim_date`**: Podrobná časová dimenzia pre analýzu trendov (deň, mesiac, štvrťrok, víkendy).
-* **`dim_seller`**: (Voliteľná dimenzia pre informácie o predajcoch).
-
+  
 Štruktúra hviezdicového modelu je znázornená na diagrame nižšie:
 
 ![Star Schema](img/FinalStarSchema.png)
