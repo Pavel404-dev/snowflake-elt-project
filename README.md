@@ -357,6 +357,9 @@ ORDER BY
 LIMIT 10;
 ```
 
+![Star Schema](img/image4.png)
+
+
 ### Graf 5: Porovnanie cien voči priemeru okresu (County)
 Táto tabuľka využíva okenné funkcie na výpočet rozdielu medzi cenou konkrétneho domu a priemernou cenou v danom okrese. Umožňuje detegovať podhodnotené alebo naopak luxusné ponuky.
 
